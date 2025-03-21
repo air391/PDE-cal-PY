@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDE分析工具</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .upload-section { margin: 20px 0; }
+        #plot { margin-top: 20px; }
+        .result { font-size: 1.2em; margin: 15px 0; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>光谱分析工具</h1>
+    
+    <div class="upload-section">
+        <h3>上传数据文件（CSV格式）</h3>
+        <div>
+            <label>发射光谱数据（Emission）: </label>
+            <input type="file" id="eFile" accept=".csv">
+        </div>
+        <div style="margin-top: 10px;">
+            <label>吸收光谱数据（Absorption）: </label>
+            <input type="file" id="aFile" accept=".csv">
+        </div>
+    </div>
+
+    <button onclick="processData()">计算并可视化</button>
+    
+    <div class="result">
+        光电转换效率（PDE）: <span id="pdeResult">待计算...</span>
+    </div>
+    
+    <div id="plot"></div>
+
+    <script>
+        let pyodide;
+        async function setupPyodide() {
+            pyodide = await loadPyodide({
+                indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/"
+            });
+            await pyodide.loadPackage(["numpy", "matplotlib"]);
+        }
+        setupPyodide();
+
+        async function processData() {
+            const eFile = document.getElementById('eFile').files[0];
+            const aFile = document.getElementById('aFile').files[0];
+            
+            if (!eFile || !aFile) {
+                alert("请先上传两个数据文件");
+                return;
+            }
+
+            try {
+                // 读取并转换CSV数据
+                const [eData, aData] = await Promise.all([
+                    parseCSV(eFile),
+                    parseCSV(aFile)
+                ]);
+
+                // 转换为Python对象
+                const eDataPy = pyodide.toPy(eData);
+                const aDataPy = pyodide.toPy(aData);
+
+                // 创建新的命名空间
+                const namespace = pyodide.toPy({
+                    e_data: eDataPy,
+                    a_data: aDataPy
+                });
+
+                // 运行Python代码
+                const pyResult = await pyodide.runPythonAsync(`
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 从命名空间获取数据
+e_array = np.array(e_data, dtype=float)
+a_array = np.array(a_data, dtype=float)
+
+# 确保二维数组结构
+if e_array.ndim == 1:
+    e_array = e_array.reshape(-1, 2)
+if a_array.ndim == 1:
+    a_array = a_array.reshape(-1, 2)
+
+# 计算PDE
+def cal_area(data):
+    return np.trapz(data[:,1], data[:,0])
+
+def cal_pde(em, ab):
+    area = cal_area(em)
+    em_inter = np.interp(ab[:,0], xp=em[:,0], fp=em[:,1])
+    pde = np.trapz(em_inter*ab[:,1]/area, ab[:,0])
+    return pde
+
+pde_value = cal_pde(e_array, a_array)
+
+# 绘图
+fig, ax = plt.subplots(figsize=(8,4))
+ax2 = ax.twinx()
+ax2.plot(e_array[:,0], e_array[:,1], color="r", label="Emission")
+ax.plot(a_array[:,0], a_array[:,1], color="g", label="Absorption")
+ax.set_xlabel("Wavelength (nm)")
+ax.set_ylabel("%")
+ax.legend(loc='upper left')
+ax2.legend(loc='upper right')
+
+# 生成图片
+from io import BytesIO
+buf = BytesIO()
+plt.savefig(buf, format='png', bbox_inches='tight')
+plt.close()
+buf.seek(0)
+image_data = buf.read().hex()
+print("Debug - PDE值:", pde_value)
+print("Debug - 图像数据长度:", len(image_data))
+{'pde': pde_value, 'image': image_data}
+                `, { globals: namespace });
+                const result = pyResult.toJs();
+                console.log(result);
+                // 显示结果
+                document.getElementById('pdeResult').textContent = result.get("pde").toFixed(4);
+                
+                // 显示图像
+                const img = new Image();
+                img.src = 'data:image/png;base64,' + hexToBase64(result.get("image"));
+                const plotDiv = document.getElementById('plot');
+                plotDiv.innerHTML = '';
+                plotDiv.appendChild(img);
+
+            } catch (error) {
+                alert(`处理错误: ${error}`);
+            }
+            return result;
+        }
+
+        async function parseCSV(file) {
+            const text = await file.text();
+            return text.split('\n')
+                .map(line => line.trim())
+                .filter(line => line)
+                .map(line => line.split(',').map(Number))
+                .filter(arr => arr.length === 2);
+        }
+
+        function hexToBase64(hexString) {
+            return btoa(String.fromCharCode.apply(null, 
+                hexString.match(/\w{2}/g).map(byte => parseInt(byte, 16))
+            ));
+        }
+    </script>
+</body>
+</html>
