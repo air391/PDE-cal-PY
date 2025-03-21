@@ -85,7 +85,8 @@ if e_array.ndim == 1:
     e_array = e_array.reshape(-1, 2)
 if a_array.ndim == 1:
     a_array = a_array.reshape(-1, 2)
-
+e_array = e_array[e_array[:, 0].argsort()]
+a_array = a_array[a_array[:, 0].argsort()]
 # 计算PDE
 def cal_area(data):
     return np.trapz(data[:,1], data[:,0])
