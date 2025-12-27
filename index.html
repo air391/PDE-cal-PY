@@ -317,12 +317,19 @@ a_array = a_array[a_array[:, 0].argsort()]
 
 # 计算PDE
 def cal_area(data):
-    return np.trapz(data[:,1], data[:,0])
+    try:
+        return np.trapz(data[:,1], data[:,0])
+    except AttributeError:
+        # For newer numpy versions
+        return np.trapezoid(data[:,1], data[:,0])
 
 def cal_pde(em, ab):
     area = cal_area(em)
     em_inter = np.interp(ab[:,0], xp=em[:,0], fp=em[:,1])
-    pde = np.trapz(em_inter*ab[:,1]/area, ab[:,0])
+    try:
+        pde = np.trapz(em_inter*ab[:,1]/area, ab[:,0])
+    except AttributeError:
+        pde = np.trapezoid(em_inter*ab[:,1]/area, ab[:,0])
     return pde, em_inter
 
 pde_value, em_interpolated = cal_pde(e_array, a_array)

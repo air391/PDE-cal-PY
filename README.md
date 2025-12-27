@@ -1,6 +1,32 @@
 # Function
 
-Calculate the PDE with scintillator emission spectrum and SiPM absorption spectrum. The emission spectrum will be interpolated at the x value of absorption spectrum, and PDE is calculated with `numpy.trapz`
+Calculate the PDE (Photon Detection Efficiency) with scintillator emission spectrum and SiPM absorption spectrum. The emission spectrum will be interpolated at the x value of absorption spectrum, and PDE is calculated with `numpy.trapz` or `numpy.trapezoid` (for compatibility with newer numpy versions).
+
+## Features
+
+- **Preset Data Selection**: Choose from built-in scintillator and SiPM data files
+- **Custom File Upload**: Upload your own CSV files for analysis
+- **Convolution Visualization**: View both original spectra and convolution results
+- **Modern UI**: Improved interface with gradient backgrounds and intuitive controls
+- **Real-time Calculation**: Python-powered calculations running in the browser using Pyodide
+
+## Usage
+
+1. Open `index.html` in a web browser
+2. Select a scintillator preset (GAGG or BC408) or upload a custom CSV file
+3. Select a SiPM preset (SensL 60035 @ 2.5V) or upload a custom CSV file
+4. Click "计算并可视化" (Calculate and Visualize)
+5. View the PDE result and visualization plots
+
+## CSV Format
+
+CSV files should contain two columns: wavelength (nm) and intensity/efficiency:
+```
+wavelength, intensity
+462.22, 0.0012402
+464.98, 0.0028274
+...
+```
 
 # Data
 
@@ -13,3 +39,8 @@ Calculate the PDE with scintillator emission spectrum and SiPM absorption spectr
 ## SiPM
 
 [Sensl 60035](https://www.onsemi.com/pdf/datasheet/microj-series-d.pdf)
+
+## Sample Results
+
+- GAGG + SensL 60035 @ 2.5V: PDE ≈ 0.1977
+- BC408 + SensL 60035 @ 2.5V: PDE ≈ 0.3875
