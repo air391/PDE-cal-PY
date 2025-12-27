@@ -3,6 +3,7 @@
 <head>
     <title>PDE分析工具</title>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -148,10 +149,7 @@
                 <div class="input-group">
                     <label>闪烁体发射光谱 (Scintillator Emission):</label>
                     <select id="scinPreset" onchange="updateScinSource()">
-                        <option value="">选择预设...</option>
-                        <option value="GAGG">GAGG (Ce-doped GAGG)</option>
-                        <option value="BC408">BC408 (Plastic Scintillator)</option>
-                        <option value="custom">上传自定义文件...</option>
+                        <option value="">加载中...</option>
                     </select>
                     <input type="file" id="eFile" accept=".csv" style="display:none; margin-top: 10px;">
                     <div class="info-text">选择预设闪烁体或上传CSV文件</div>
@@ -160,9 +158,7 @@
                 <div class="input-group">
                     <label>SiPM光电探测效率 (SiPM PDE):</label>
                     <select id="sipmPreset" onchange="updateSipmSource()">
-                        <option value="">选择预设...</option>
-                        <option value="60035_2.5V">SensL 60035 @ 2.5V</option>
-                        <option value="custom">上传自定义文件...</option>
+                        <option value="">加载中...</option>
                     </select>
                     <input type="file" id="aFile" accept=".csv" style="display:none; margin-top: 10px;">
                     <div class="info-text">选择预设SiPM或上传CSV文件</div>
@@ -190,6 +186,57 @@
     <script>
         let pyodide;
         let pyodideReady = false;
+        let presetsConfig = null;
+        
+        // Load presets configuration from JSON
+        async function loadPresetsConfig() {
+            try {
+                const response = await fetch('presets.json');
+                if (!response.ok) {
+                    throw new Error('Failed to load presets configuration');
+                }
+                presetsConfig = await response.json();
+                populateDropdowns();
+            } catch (error) {
+                console.error('Error loading presets:', error);
+                alert('无法加载预设配置文件，请检查 presets.json 是否存在');
+            }
+        }
+        
+        // Populate dropdowns from JSON config
+        function populateDropdowns() {
+            if (!presetsConfig) return;
+            
+            // Populate scintillator dropdown
+            const scinSelect = document.getElementById('scinPreset');
+            scinSelect.innerHTML = '<option value="">选择预设...</option>';
+            presetsConfig.scintillators.forEach(scin => {
+                const option = document.createElement('option');
+                option.value = scin.id;
+                option.textContent = scin.name;
+                option.title = scin.description;
+                scinSelect.appendChild(option);
+            });
+            const customScin = document.createElement('option');
+            customScin.value = 'custom';
+            customScin.textContent = '上传自定义文件...';
+            scinSelect.appendChild(customScin);
+            
+            // Populate SiPM dropdown
+            const sipmSelect = document.getElementById('sipmPreset');
+            sipmSelect.innerHTML = '<option value="">选择预设...</option>';
+            presetsConfig.sipms.forEach(sipm => {
+                const option = document.createElement('option');
+                option.value = sipm.id;
+                option.textContent = sipm.name;
+                option.title = sipm.description;
+                sipmSelect.appendChild(option);
+            });
+            const customSipm = document.createElement('option');
+            customSipm.value = 'custom';
+            customSipm.textContent = '上传自定义文件...';
+            sipmSelect.appendChild(customSipm);
+        }
         
         async function setupPyodide() {
             try {
@@ -198,7 +245,7 @@
                 pyodide = await loadPyodide({
                     indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/"
                 });
-                await pyodide.loadPackage(["numpy", "matplotlib"]);
+                await pyodide.loadPackage(["numpy"]);
                 pyodideReady = true;
                 document.getElementById('calcButton').disabled = false;
                 document.getElementById('calcButton').textContent = '🧮 计算并可视化';
@@ -206,18 +253,10 @@
                 alert('初始化Python环境失败: ' + error);
             }
         }
-        setupPyodide();
+        
+        // Load presets and setup Pyodide on page load
+        Promise.all([loadPresetsConfig(), setupPyodide()]);
 
-        // Preset configurations - whitelist for security
-        const PRESET_CONFIG = {
-            scintillators: {
-                'GAGG': 'Scin/GAGG.csv',
-                'BC408': 'Scin/BC408.csv'
-            },
-            sipms: {
-                '60035_2.5V': 'SiPM/60035_2.5V.csv'
-            }
-        };
 
         function updateScinSource() {
             const preset = document.getElementById('scinPreset').value;
@@ -237,6 +276,13 @@
             } else {
                 fileInput.style.display = 'none';
             }
+        }
+
+        function getPresetPath(type, id) {
+            if (!presetsConfig) return null;
+            const presets = type === 'scintillator' ? presetsConfig.scintillators : presetsConfig.sipms;
+            const preset = presets.find(p => p.id === id);
+            return preset ? preset.file : null;
         }
 
         async function parseCSVText(text) {
@@ -298,8 +344,8 @@
                     const eFile = document.getElementById('eFile').files[0];
                     eData = await parseCSV(eFile);
                 } else {
-                    // Validate against whitelist
-                    const presetPath = PRESET_CONFIG.scintillators[scinPreset];
+                    // Get path from JSON config
+                    const presetPath = getPresetPath('scintillator', scinPreset);
                     if (!presetPath) {
                         throw new Error(`Invalid scintillator preset: ${scinPreset}`);
                     }
@@ -311,8 +357,8 @@
                     const aFile = document.getElementById('aFile').files[0];
                     aData = await parseCSV(aFile);
                 } else {
-                    // Validate against whitelist
-                    const presetPath = PRESET_CONFIG.sipms[sipmPreset];
+                    // Get path from JSON config
+                    const presetPath = getPresetPath('sipm', sipmPreset);
                     if (!presetPath) {
                         throw new Error(`Invalid SiPM preset: ${sipmPreset}`);
                     }
@@ -329,10 +375,9 @@
                     a_data: aDataPy
                 });
 
-                // 运行Python代码
+                // 运行Python代码进行计算
                 const pyResult = await pyodide.runPythonAsync(`
 import numpy as np
-import matplotlib.pyplot as plt
 
 # 从命名空间获取数据
 e_array = np.array(e_data, dtype=float)
@@ -369,50 +414,16 @@ pde_value, em_interpolated = cal_pde(e_array, a_array)
 area_emission = cal_area(e_array)
 convolution_result = em_interpolated * a_array[:,1] / area_emission
 
-# 绘图 - 创建更详细的可视化
-fig = plt.figure(figsize=(12, 8))
-
-# 第一个子图：原始光谱
-ax1 = plt.subplot(2, 1, 1)
-ax1_twin = ax1.twinx()
-
-line1 = ax1_twin.plot(e_array[:,0], e_array[:,1], color="red", linewidth=2, label="发射光谱 (Emission)", alpha=0.8)
-line2 = ax1.plot(a_array[:,0], a_array[:,1]*100, color="green", linewidth=2, label="SiPM PDE (%)", alpha=0.8)
-
-ax1.set_xlabel("波长 Wavelength (nm)", fontsize=12)
-ax1.set_ylabel("SiPM PDE (%)", fontsize=12, color="green")
-ax1_twin.set_ylabel("发射强度 (a.u.)", fontsize=12, color="red")
-ax1.tick_params(axis='y', labelcolor='green')
-ax1_twin.tick_params(axis='y', labelcolor='red')
-ax1.set_title("闪烁体发射光谱与SiPM光电探测效率", fontsize=14, fontweight='bold')
-ax1.grid(True, alpha=0.3)
-
-lines = line1 + line2
-labels = [l.get_label() for l in lines]
-ax1.legend(lines, labels, loc='upper left', framealpha=0.9)
-
-# 第二个子图：卷积结果
-ax2 = plt.subplot(2, 1, 2)
-line3 = ax2.plot(a_array[:,0], convolution_result, color="purple", linewidth=2, label="卷积结果 (Convolution)", alpha=0.8)
-ax2.fill_between(a_array[:,0], 0, convolution_result, color="purple", alpha=0.3)
-
-ax2.set_xlabel("波长 Wavelength (nm)", fontsize=12)
-ax2.set_ylabel("卷积强度 (a.u.)", fontsize=12)
-ax2.set_title(f"归一化卷积结果 - PDE = {pde_value:.4f}", fontsize=14, fontweight='bold')
-ax2.grid(True, alpha=0.3)
-ax2.legend(loc='upper right', framealpha=0.9)
-
-plt.tight_layout()
-
-# 生成图片
-from io import BytesIO
-buf = BytesIO()
-plt.savefig(buf, format='png', dpi=100, bbox_inches='tight')
-plt.close()
-buf.seek(0)
-image_data = buf.read().hex()
-
-{'pde': pde_value, 'image': image_data}
+# 返回计算结果
+{
+    'pde': pde_value,
+    'e_wavelength': e_array[:,0].tolist(),
+    'e_intensity': e_array[:,1].tolist(),
+    'a_wavelength': a_array[:,0].tolist(),
+    'a_pde': a_array[:,1].tolist(),
+    'conv_wavelength': a_array[:,0].tolist(),
+    'conv_result': convolution_result.tolist()
+}
                 `, { globals: namespace });
                 const result = pyResult.toJs();
                 
@@ -421,15 +432,127 @@ image_data = buf.read().hex()
                 document.getElementById('calcButton').disabled = false;
                 
                 // 显示结果
-                document.getElementById('pdeResult').textContent = result.get("pde").toFixed(4);
+                const pdeValue = result.get("pde");
+                document.getElementById('pdeResult').textContent = pdeValue.toFixed(4);
                 document.getElementById('resultSection').style.display = 'block';
                 
-                // 显示图像
-                const img = new Image();
-                img.src = 'data:image/png;base64,' + hexToBase64(result.get("image"));
+                // 使用Plotly创建图表
                 const plotDiv = document.getElementById('plot');
-                plotDiv.innerHTML = '<h3>📈 分析结果</h3>';
-                plotDiv.appendChild(img);
+                plotDiv.innerHTML = '<h3>📈 分析结果</h3><div id="plotly-chart"></div>';
+                
+                // 准备数据
+                const eWavelength = Array.from(result.get("e_wavelength"));
+                const eIntensity = Array.from(result.get("e_intensity"));
+                const aWavelength = Array.from(result.get("a_wavelength"));
+                const aPde = Array.from(result.get("a_pde"));
+                const convWavelength = Array.from(result.get("conv_wavelength"));
+                const convResult = Array.from(result.get("conv_result"));
+                
+                // 创建双y轴图表和卷积结果图
+                const trace1 = {
+                    x: eWavelength,
+                    y: eIntensity,
+                    name: '发射光谱 (Emission)',
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: 'red', width: 2 },
+                    yaxis: 'y2'
+                };
+                
+                const trace2 = {
+                    x: aWavelength,
+                    y: aPde.map(v => v * 100),
+                    name: 'SiPM PDE (%)',
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: 'green', width: 2 }
+                };
+                
+                const trace3 = {
+                    x: convWavelength,
+                    y: convResult,
+                    name: '卷积结果 (Convolution)',
+                    type: 'scatter',
+                    mode: 'lines',
+                    fill: 'tozeroy',
+                    line: { color: 'purple', width: 2 },
+                    fillcolor: 'rgba(128, 0, 128, 0.3)'
+                };
+                
+                const layout = {
+                    title: {
+                        text: '闪烁体与SiPM的PDE分析',
+                        font: { size: 18, family: 'Arial, sans-serif' }
+                    },
+                    grid: { rows: 2, columns: 1, pattern: 'independent' },
+                    xaxis: {
+                        title: '波长 Wavelength (nm)',
+                        showgrid: true,
+                        gridcolor: '#e0e0e0'
+                    },
+                    yaxis: {
+                        title: 'SiPM PDE (%)',
+                        titlefont: { color: 'green' },
+                        tickfont: { color: 'green' },
+                        showgrid: true,
+                        gridcolor: '#e0e0e0'
+                    },
+                    yaxis2: {
+                        title: '发射强度 (a.u.)',
+                        titlefont: { color: 'red' },
+                        tickfont: { color: 'red' },
+                        overlaying: 'y',
+                        side: 'right'
+                    },
+                    xaxis2: {
+                        title: '波长 Wavelength (nm)',
+                        showgrid: true,
+                        gridcolor: '#e0e0e0',
+                        anchor: 'y3'
+                    },
+                    yaxis3: {
+                        title: '卷积强度 (a.u.)',
+                        showgrid: true,
+                        gridcolor: '#e0e0e0',
+                        anchor: 'x2'
+                    },
+                    annotations: [{
+                        text: `PDE = ${pdeValue.toFixed(4)}`,
+                        xref: 'paper',
+                        yref: 'paper',
+                        x: 0.5,
+                        y: -0.15,
+                        xanchor: 'center',
+                        showarrow: false,
+                        font: { size: 16, color: 'purple' }
+                    }],
+                    height: 800,
+                    showlegend: true,
+                    legend: { x: 0.02, y: 0.98 }
+                };
+                
+                // 使用子图布局
+                Plotly.newPlot('plotly-chart', [
+                    { ...trace1, xaxis: 'x', yaxis: 'y2' },
+                    { ...trace2, xaxis: 'x', yaxis: 'y' }
+                ], {
+                    title: '闪烁体发射光谱与SiPM光电探测效率',
+                    xaxis: { title: '波长 Wavelength (nm)', domain: [0, 1], anchor: 'y' },
+                    yaxis: { title: 'SiPM PDE (%)', domain: [0.55, 1], titlefont: { color: 'green' }, tickfont: { color: 'green' } },
+                    yaxis2: { title: '发射强度 (a.u.)', overlaying: 'y', side: 'right', titlefont: { color: 'red' }, tickfont: { color: 'red' } },
+                    xaxis2: { title: '波长 Wavelength (nm)', domain: [0, 1], anchor: 'y3' },
+                    yaxis3: { title: '卷积强度 (a.u.)', domain: [0, 0.45] },
+                    height: 800,
+                    showlegend: true,
+                    font: { family: 'Arial, sans-serif' }
+                }, { responsive: true });
+                
+                // 添加第二个子图（卷积）
+                Plotly.addTraces('plotly-chart', [{
+                    ...trace3,
+                    xaxis: 'x2',
+                    yaxis: 'y3'
+                }]);
 
             } catch (error) {
                 document.getElementById('loading').classList.remove('active');
@@ -442,12 +565,6 @@ image_data = buf.read().hex()
         async function parseCSV(file) {
             const text = await file.text();
             return parseCSVText(text);
-        }
-
-        function hexToBase64(hexString) {
-            return btoa(String.fromCharCode.apply(null, 
-                hexString.match(/\w{2}/g).map(byte => parseInt(byte, 16))
-            ));
         }
     </script>
 </body>

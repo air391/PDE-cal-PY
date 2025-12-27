@@ -4,19 +4,44 @@ Calculate the PDE (Photon Detection Efficiency) with scintillator emission spect
 
 ## Features
 
-- **Preset Data Selection**: Choose from built-in scintillator and SiPM data files
+- **JSON-based Preset Configuration**: Presets are defined in `presets.json` - add new CSV files by simply updating this file
+- **Preset Data Selection**: Choose from built-in scintillator and SiPM data files loaded dynamically from JSON
 - **Custom File Upload**: Upload your own CSV files for analysis
-- **Convolution Visualization**: View both original spectra and convolution results
+- **Interactive Plotly Visualization**: Web-optimized charts with proper Chinese character support
+- **Convolution Visualization**: View both original spectra and convolution results in dual-panel layout
 - **Modern UI**: Improved interface with gradient backgrounds and intuitive controls
 - **Real-time Calculation**: Python-powered calculations running in the browser using Pyodide
 
 ## Usage
 
 1. Open `index.html` in a web browser
-2. Select a scintillator preset (GAGG or BC408) or upload a custom CSV file
-3. Select a SiPM preset (SensL 60035 @ 2.5V) or upload a custom CSV file
-4. Click "计算并可视化" (Calculate and Visualize)
-5. View the PDE result and visualization plots
+2. Wait for the preset configuration to load from `presets.json`
+3. Select a scintillator preset (GAGG or BC408) or upload a custom CSV file
+4. Select a SiPM preset (SensL 60035 @ 2.5V) or upload a custom CSV file
+5. Click "计算并可视化" (Calculate and Visualize)
+6. View the PDE result and interactive Plotly visualization
+
+## Adding New Presets
+
+To add new CSV data files:
+
+1. Place your CSV file in the appropriate directory (`Scin/` or `SiPM/`)
+2. Edit `presets.json` to add the new preset:
+
+```json
+{
+  "scintillators": [
+    {
+      "id": "NEW_SCIN",
+      "name": "Display Name",
+      "description": "Description of the scintillator",
+      "file": "Scin/new_file.csv"
+    }
+  ]
+}
+```
+
+No HTML code changes required!
 
 ## CSV Format
 
@@ -44,3 +69,9 @@ wavelength, intensity
 
 - GAGG + SensL 60035 @ 2.5V: PDE ≈ 0.1977
 - BC408 + SensL 60035 @ 2.5V: PDE ≈ 0.3875
+
+## Technology Stack
+
+- **Plotly.js**: Interactive, web-optimized plotting with full Chinese character support
+- **Pyodide**: Python runtime in the browser for numerical calculations
+- **JSON Configuration**: Easy preset management without code changes

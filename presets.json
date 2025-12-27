@@ -1,0 +1,24 @@
+{
+  "scintillators": [
+    {
+      "id": "GAGG",
+      "name": "GAGG (Ce-doped GAGG)",
+      "description": "Cerium-doped Gadolinium Aluminum Gallium Garnet scintillator",
+      "file": "Scin/GAGG.csv"
+    },
+    {
+      "id": "BC408",
+      "name": "BC408 (Plastic Scintillator)",
+      "description": "General purpose plastic scintillator",
+      "file": "Scin/BC408.csv"
+    }
+  ],
+  "sipms": [
+    {
+      "id": "60035_2.5V",
+      "name": "SensL 60035 @ 2.5V",
+      "description": "SensL MicroJ-series 60035 SiPM at 2.5V overvoltage",
+      "file": "SiPM/60035_2.5V.csv"
+    }
+  ]
+}
