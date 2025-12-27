@@ -274,6 +274,17 @@
                 return;
             }
 
+            // Validate custom file uploads
+            if (scinPreset === 'custom' && !document.getElementById('eFile').files[0]) {
+                alert("请上传闪烁体光谱CSV文件");
+                return;
+            }
+            
+            if (sipmPreset === 'custom' && !document.getElementById('aFile').files[0]) {
+                alert("请上传SiPM PDE CSV文件");
+                return;
+            }
+
             // Show loading
             document.getElementById('loading').classList.add('active');
             document.getElementById('calcButton').disabled = true;
@@ -285,10 +296,6 @@
                 // Load scintillator data
                 if (scinPreset === 'custom') {
                     const eFile = document.getElementById('eFile').files[0];
-                    if (!eFile) {
-                        alert("请上传闪烁体光谱CSV文件");
-                        return;
-                    }
                     eData = await parseCSV(eFile);
                 } else {
                     // Validate against whitelist
@@ -302,10 +309,6 @@
                 // Load SiPM data
                 if (sipmPreset === 'custom') {
                     const aFile = document.getElementById('aFile').files[0];
-                    if (!aFile) {
-                        alert("请上传SiPM PDE CSV文件");
-                        return;
-                    }
                     aData = await parseCSV(aFile);
                 } else {
                     // Validate against whitelist
