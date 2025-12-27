@@ -255,7 +255,10 @@
         }
         
         // Load presets and setup Pyodide on page load
-        Promise.all([loadPresetsConfig(), setupPyodide()]);
+        Promise.all([loadPresetsConfig(), setupPyodide()]).catch(error => {
+            console.error('Initialization error:', error);
+            alert('初始化失败，请刷新页面重试');
+        });
 
 
         function updateScinSource() {
