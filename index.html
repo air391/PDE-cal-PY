@@ -479,80 +479,73 @@ convolution_result = em_interpolated * a_array[:,1] / area_emission
                     fillcolor: 'rgba(128, 0, 128, 0.3)'
                 };
                 
+                // 创建完整的Plotly布局（双子图）
+                const allTraces = [
+                    { ...trace1, xaxis: 'x', yaxis: 'y2' },
+                    { ...trace2, xaxis: 'x', yaxis: 'y' },
+                    { ...trace3, xaxis: 'x2', yaxis: 'y3' }
+                ];
+                
                 const layout = {
                     title: {
                         text: '闪烁体与SiPM的PDE分析',
                         font: { size: 18, family: 'Arial, sans-serif' }
                     },
-                    grid: { rows: 2, columns: 1, pattern: 'independent' },
+                    // 第一个子图的x轴
                     xaxis: {
                         title: '波长 Wavelength (nm)',
-                        showgrid: true,
-                        gridcolor: '#e0e0e0'
+                        domain: [0, 1],
+                        anchor: 'y',
+                        showgrid: true
                     },
+                    // 第一个子图的左y轴 (SiPM PDE)
                     yaxis: {
                         title: 'SiPM PDE (%)',
+                        domain: [0.55, 1],
                         titlefont: { color: 'green' },
                         tickfont: { color: 'green' },
-                        showgrid: true,
-                        gridcolor: '#e0e0e0'
+                        showgrid: true
                     },
+                    // 第一个子图的右y轴 (发射光谱)
                     yaxis2: {
                         title: '发射强度 (a.u.)',
-                        titlefont: { color: 'red' },
-                        tickfont: { color: 'red' },
                         overlaying: 'y',
-                        side: 'right'
+                        side: 'right',
+                        titlefont: { color: 'red' },
+                        tickfont: { color: 'red' }
                     },
+                    // 第二个子图的x轴
                     xaxis2: {
                         title: '波长 Wavelength (nm)',
-                        showgrid: true,
-                        gridcolor: '#e0e0e0',
-                        anchor: 'y3'
+                        domain: [0, 1],
+                        anchor: 'y3',
+                        showgrid: true
                     },
+                    // 第二个子图的y轴 (卷积)
                     yaxis3: {
                         title: '卷积强度 (a.u.)',
-                        showgrid: true,
-                        gridcolor: '#e0e0e0',
-                        anchor: 'x2'
+                        domain: [0, 0.45],
+                        showgrid: true
                     },
                     annotations: [{
                         text: `PDE = ${pdeValue.toFixed(4)}`,
                         xref: 'paper',
                         yref: 'paper',
                         x: 0.5,
-                        y: -0.15,
+                        y: -0.05,
                         xanchor: 'center',
                         showarrow: false,
-                        font: { size: 16, color: 'purple' }
+                        font: { size: 16, color: 'purple', weight: 'bold' }
                     }],
                     height: 800,
                     showlegend: true,
-                    legend: { x: 0.02, y: 0.98 }
+                    legend: { x: 0.02, y: 0.98 },
+                    font: { family: 'Arial, sans-serif' },
+                    hovermode: 'x unified'
                 };
                 
-                // 使用子图布局
-                Plotly.newPlot('plotly-chart', [
-                    { ...trace1, xaxis: 'x', yaxis: 'y2' },
-                    { ...trace2, xaxis: 'x', yaxis: 'y' }
-                ], {
-                    title: '闪烁体发射光谱与SiPM光电探测效率',
-                    xaxis: { title: '波长 Wavelength (nm)', domain: [0, 1], anchor: 'y' },
-                    yaxis: { title: 'SiPM PDE (%)', domain: [0.55, 1], titlefont: { color: 'green' }, tickfont: { color: 'green' } },
-                    yaxis2: { title: '发射强度 (a.u.)', overlaying: 'y', side: 'right', titlefont: { color: 'red' }, tickfont: { color: 'red' } },
-                    xaxis2: { title: '波长 Wavelength (nm)', domain: [0, 1], anchor: 'y3' },
-                    yaxis3: { title: '卷积强度 (a.u.)', domain: [0, 0.45] },
-                    height: 800,
-                    showlegend: true,
-                    font: { family: 'Arial, sans-serif' }
-                }, { responsive: true });
-                
-                // 添加第二个子图（卷积）
-                Plotly.addTraces('plotly-chart', [{
-                    ...trace3,
-                    xaxis: 'x2',
-                    yaxis: 'y3'
-                }]);
+                // 一次性创建所有图表
+                Plotly.newPlot('plotly-chart', allTraces, layout, { responsive: true });
 
             } catch (error) {
                 document.getElementById('loading').classList.remove('active');
