@@ -3,63 +3,370 @@
 <head>
     <title>PDE分析工具</title>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .upload-section { margin: 20px 0; }
-        #plot { margin-top: 20px; }
-        .result { font-size: 1.2em; margin: 15px 0; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0056b3; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 30px; 
+            background: linear-gradient(to bottom, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #2c3e50; 
+            text-align: center; 
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .input-section { 
+            margin: 30px 0; 
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label { 
+            font-weight: 600; 
+            margin-bottom: 8px; 
+            color: #495057;
+            display: block;
+        }
+        select, input[type="file"] {
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+        }
+        select:focus, input[type="file"]:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        button { 
+            padding: 12px 40px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            border: none; 
+            border-radius: 25px; 
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .result-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+        .result { 
+            font-size: 1.5em; 
+            font-weight: 600;
+        }
+        #pdeResult {
+            font-size: 1.8em;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        #plot { 
+            margin-top: 30px; 
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        #plot img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .info-text {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        h3 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            color: #667eea;
+            font-weight: 600;
+        }
+        .loading.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
-    <h1>光谱分析工具</h1>
-    
-    <div class="upload-section">
-        <h3>上传数据文件（CSV格式）</h3>
-        <div>
-            <label>发射光谱数据（Emission）: </label>
-            <input type="file" id="eFile" accept=".csv">
+    <div class="container">
+        <h1>🔬 闪烁体与SiPM的PDE分析工具</h1>
+        
+        <div class="input-section">
+            <h3>📊 数据输入配置</h3>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>闪烁体发射光谱 (Scintillator Emission):</label>
+                    <select id="scinPreset" onchange="updateScinSource()">
+                        <option value="">加载中...</option>
+                    </select>
+                    <input type="file" id="eFile" accept=".csv" style="display:none; margin-top: 10px;">
+                    <div class="info-text">选择预设闪烁体或上传CSV文件</div>
+                </div>
+                
+                <div class="input-group">
+                    <label>SiPM光电探测效率 (SiPM PDE):</label>
+                    <select id="sipmPreset" onchange="updateSipmSource()">
+                        <option value="">加载中...</option>
+                    </select>
+                    <input type="file" id="aFile" accept=".csv" style="display:none; margin-top: 10px;">
+                    <div class="info-text">选择预设SiPM或上传CSV文件</div>
+                </div>
+            </div>
         </div>
-        <div style="margin-top: 10px;">
-            <label>吸收光谱数据（Absorption）: </label>
-            <input type="file" id="aFile" accept=".csv">
-        </div>
-    </div>
 
-    <button onclick="processData()">计算并可视化</button>
-    
-    <div class="result">
-        光电转换效率（PDE）: <span id="pdeResult">待计算...</span>
+        <div class="button-container">
+            <button onclick="processData()" id="calcButton">🧮 计算并可视化</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            ⏳ 正在计算中...
+        </div>
+        
+        <div class="result-section" style="display:none;" id="resultSection">
+            <div class="result">
+                光电探测效率（PDE）: <span id="pdeResult">--</span>
+            </div>
+        </div>
+        
+        <div id="plot"></div>
     </div>
-    
-    <div id="plot"></div>
 
     <script>
         let pyodide;
-        async function setupPyodide() {
-            pyodide = await loadPyodide({
-                indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/"
-            });
-            await pyodide.loadPackage(["numpy", "matplotlib"]);
+        let pyodideReady = false;
+        let presetsConfig = null;
+        
+        // Load presets configuration from JSON
+        async function loadPresetsConfig() {
+            try {
+                const response = await fetch('presets.json');
+                if (!response.ok) {
+                    throw new Error('Failed to load presets configuration');
+                }
+                presetsConfig = await response.json();
+                populateDropdowns();
+            } catch (error) {
+                console.error('Error loading presets:', error);
+                alert('无法加载预设配置文件，请检查 presets.json 是否存在');
+            }
         }
-        setupPyodide();
+        
+        // Populate dropdowns from JSON config
+        function populateDropdowns() {
+            if (!presetsConfig) return;
+            
+            // Populate scintillator dropdown
+            const scinSelect = document.getElementById('scinPreset');
+            scinSelect.innerHTML = '<option value="">选择预设...</option>';
+            presetsConfig.scintillators.forEach(scin => {
+                const option = document.createElement('option');
+                option.value = scin.id;
+                option.textContent = scin.name;
+                option.title = scin.description;
+                scinSelect.appendChild(option);
+            });
+            const customScin = document.createElement('option');
+            customScin.value = 'custom';
+            customScin.textContent = '上传自定义文件...';
+            scinSelect.appendChild(customScin);
+            
+            // Populate SiPM dropdown
+            const sipmSelect = document.getElementById('sipmPreset');
+            sipmSelect.innerHTML = '<option value="">选择预设...</option>';
+            presetsConfig.sipms.forEach(sipm => {
+                const option = document.createElement('option');
+                option.value = sipm.id;
+                option.textContent = sipm.name;
+                option.title = sipm.description;
+                sipmSelect.appendChild(option);
+            });
+            const customSipm = document.createElement('option');
+            customSipm.value = 'custom';
+            customSipm.textContent = '上传自定义文件...';
+            sipmSelect.appendChild(customSipm);
+        }
+        
+        async function setupPyodide() {
+            try {
+                document.getElementById('calcButton').disabled = true;
+                document.getElementById('calcButton').textContent = '⏳ 初始化Python环境...';
+                pyodide = await loadPyodide({
+                    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/"
+                });
+                await pyodide.loadPackage(["numpy"]);
+                pyodideReady = true;
+                document.getElementById('calcButton').disabled = false;
+                document.getElementById('calcButton').textContent = '🧮 计算并可视化';
+            } catch (error) {
+                alert('初始化Python环境失败: ' + error);
+            }
+        }
+        
+        // Load presets and setup Pyodide on page load
+        Promise.all([loadPresetsConfig(), setupPyodide()]).catch(error => {
+            console.error('Initialization error:', error);
+            alert('初始化失败，请刷新页面重试');
+        });
+
+
+        function updateScinSource() {
+            const preset = document.getElementById('scinPreset').value;
+            const fileInput = document.getElementById('eFile');
+            if (preset === 'custom') {
+                fileInput.style.display = 'block';
+            } else {
+                fileInput.style.display = 'none';
+            }
+        }
+
+        function updateSipmSource() {
+            const preset = document.getElementById('sipmPreset').value;
+            const fileInput = document.getElementById('aFile');
+            if (preset === 'custom') {
+                fileInput.style.display = 'block';
+            } else {
+                fileInput.style.display = 'none';
+            }
+        }
+
+        function getPresetPath(type, id) {
+            if (!presetsConfig) return null;
+            const presets = type === 'scintillator' ? presetsConfig.scintillators : presetsConfig.sipms;
+            const preset = presets.find(p => p.id === id);
+            return preset ? preset.file : null;
+        }
+
+        async function parseCSVText(text) {
+            return text.split('\n')
+                .map(line => line.trim())
+                .filter(line => line && line.length > 0)
+                .map(line => line.split(',').map(v => parseFloat(v.trim())))
+                .filter(arr => arr.length === 2 && !isNaN(arr[0]) && !isNaN(arr[1]));
+        }
+
+        async function loadPresetCSV(path) {
+            try {
+                const response = await fetch(path);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const text = await response.text();
+                return parseCSVText(text);
+            } catch (error) {
+                throw new Error(`加载预设文件失败 (${path}): ${error.message}`);
+            }
+        }
 
         async function processData() {
-            const eFile = document.getElementById('eFile').files[0];
-            const aFile = document.getElementById('aFile').files[0];
-            
-            if (!eFile || !aFile) {
-                alert("请先上传两个数据文件");
+            if (!pyodideReady) {
+                alert("Python环境尚未准备好，请稍候...");
                 return;
             }
 
+            const scinPreset = document.getElementById('scinPreset').value;
+            const sipmPreset = document.getElementById('sipmPreset').value;
+            
+            if (!scinPreset || !sipmPreset) {
+                alert("请选择闪烁体和SiPM数据源");
+                return;
+            }
+
+            // Validate custom file uploads
+            if (scinPreset === 'custom' && !document.getElementById('eFile').files[0]) {
+                alert("请上传闪烁体光谱CSV文件");
+                return;
+            }
+            
+            if (sipmPreset === 'custom' && !document.getElementById('aFile').files[0]) {
+                alert("请上传SiPM PDE CSV文件");
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('calcButton').disabled = true;
+            document.getElementById('resultSection').style.display = 'none';
+
             try {
-                // 读取并转换CSV数据
-                const [eData, aData] = await Promise.all([
-                    parseCSV(eFile),
-                    parseCSV(aFile)
-                ]);
+                let eData, aData;
+
+                // Load scintillator data
+                if (scinPreset === 'custom') {
+                    const eFile = document.getElementById('eFile').files[0];
+                    eData = await parseCSV(eFile);
+                } else {
+                    // Get path from JSON config
+                    const presetPath = getPresetPath('scintillator', scinPreset);
+                    if (!presetPath) {
+                        throw new Error(`Invalid scintillator preset: ${scinPreset}`);
+                    }
+                    eData = await loadPresetCSV(presetPath);
+                }
+
+                // Load SiPM data
+                if (sipmPreset === 'custom') {
+                    const aFile = document.getElementById('aFile').files[0];
+                    aData = await parseCSV(aFile);
+                } else {
+                    // Get path from JSON config
+                    const presetPath = getPresetPath('sipm', sipmPreset);
+                    if (!presetPath) {
+                        throw new Error(`Invalid SiPM preset: ${sipmPreset}`);
+                    }
+                    aData = await loadPresetCSV(presetPath);
+                }
 
                 // 转换为Python对象
                 const eDataPy = pyodide.toPy(eData);
@@ -71,10 +378,9 @@
                     a_data: aDataPy
                 });
 
-                // 运行Python代码
+                // 运行Python代码进行计算
                 const pyResult = await pyodide.runPythonAsync(`
 import numpy as np
-import matplotlib.pyplot as plt
 
 # 从命名空间获取数据
 e_array = np.array(e_data, dtype=float)
@@ -87,70 +393,174 @@ if a_array.ndim == 1:
     a_array = a_array.reshape(-1, 2)
 e_array = e_array[e_array[:, 0].argsort()]
 a_array = a_array[a_array[:, 0].argsort()]
+
 # 计算PDE
 def cal_area(data):
-    return np.trapz(data[:,1], data[:,0])
+    # Use hasattr to check for numpy version compatibility
+    if hasattr(np, 'trapz'):
+        return np.trapz(data[:,1], data[:,0])
+    else:
+        return np.trapezoid(data[:,1], data[:,0])
 
 def cal_pde(em, ab):
     area = cal_area(em)
     em_inter = np.interp(ab[:,0], xp=em[:,0], fp=em[:,1])
-    pde = np.trapz(em_inter*ab[:,1]/area, ab[:,0])
-    return pde
+    if hasattr(np, 'trapz'):
+        pde = np.trapz(em_inter*ab[:,1]/area, ab[:,0])
+    else:
+        pde = np.trapezoid(em_inter*ab[:,1]/area, ab[:,0])
+    return pde, em_inter
 
-pde_value = cal_pde(e_array, a_array)
+pde_value, em_interpolated = cal_pde(e_array, a_array)
 
-# 绘图
-fig, ax = plt.subplots(figsize=(8,4))
-ax2 = ax.twinx()
-ax2.plot(e_array[:,0], e_array[:,1], color="r", label="Emission")
-ax.plot(a_array[:,0], a_array[:,1], color="g", label="Absorption")
-ax.set_xlabel("Wavelength (nm)")
-ax.set_ylabel("%")
-ax.legend(loc='upper left')
-ax2.legend(loc='upper right')
+# 计算卷积结果（归一化的发射光谱与PDE的乘积）
+area_emission = cal_area(e_array)
+convolution_result = em_interpolated * a_array[:,1] / area_emission
 
-# 生成图片
-from io import BytesIO
-buf = BytesIO()
-plt.savefig(buf, format='png', bbox_inches='tight')
-plt.close()
-buf.seek(0)
-image_data = buf.read().hex()
-print("Debug - PDE值:", pde_value)
-print("Debug - 图像数据长度:", len(image_data))
-{'pde': pde_value, 'image': image_data}
+# 返回计算结果
+{
+    'pde': pde_value,
+    'e_wavelength': e_array[:,0].tolist(),
+    'e_intensity': e_array[:,1].tolist(),
+    'a_wavelength': a_array[:,0].tolist(),
+    'a_pde': a_array[:,1].tolist(),
+    'conv_wavelength': a_array[:,0].tolist(),
+    'conv_result': convolution_result.tolist()
+}
                 `, { globals: namespace });
                 const result = pyResult.toJs();
-                console.log(result);
-                // 显示结果
-                document.getElementById('pdeResult').textContent = result.get("pde").toFixed(4);
                 
-                // 显示图像
-                const img = new Image();
-                img.src = 'data:image/png;base64,' + hexToBase64(result.get("image"));
+                // Hide loading
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('calcButton').disabled = false;
+                
+                // 显示结果
+                const pdeValue = result.get("pde");
+                document.getElementById('pdeResult').textContent = pdeValue.toFixed(4);
+                document.getElementById('resultSection').style.display = 'block';
+                
+                // 使用Plotly创建图表
                 const plotDiv = document.getElementById('plot');
-                plotDiv.innerHTML = '';
-                plotDiv.appendChild(img);
+                plotDiv.innerHTML = '<h3>📈 分析结果</h3><div id="plotly-chart"></div>';
+                
+                // 准备数据
+                const eWavelength = Array.from(result.get("e_wavelength"));
+                const eIntensity = Array.from(result.get("e_intensity"));
+                const aWavelength = Array.from(result.get("a_wavelength"));
+                const aPde = Array.from(result.get("a_pde"));
+                const convWavelength = Array.from(result.get("conv_wavelength"));
+                const convResult = Array.from(result.get("conv_result"));
+                
+                // 创建双y轴图表和卷积结果图
+                const trace1 = {
+                    x: eWavelength,
+                    y: eIntensity,
+                    name: '发射光谱 (Emission)',
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: 'red', width: 2 },
+                    yaxis: 'y2'
+                };
+                
+                const trace2 = {
+                    x: aWavelength,
+                    y: aPde.map(v => v * 100),
+                    name: 'SiPM PDE (%)',
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: 'green', width: 2 }
+                };
+                
+                const trace3 = {
+                    x: convWavelength,
+                    y: convResult,
+                    name: '卷积结果 (Convolution)',
+                    type: 'scatter',
+                    mode: 'lines',
+                    fill: 'tozeroy',
+                    line: { color: 'purple', width: 2 },
+                    fillcolor: 'rgba(128, 0, 128, 0.3)'
+                };
+                
+                // 创建完整的Plotly布局（双子图）
+                const allTraces = [
+                    { ...trace1, xaxis: 'x', yaxis: 'y2' },
+                    { ...trace2, xaxis: 'x', yaxis: 'y' },
+                    { ...trace3, xaxis: 'x2', yaxis: 'y3' }
+                ];
+                
+                const layout = {
+                    title: {
+                        text: '闪烁体与SiPM的PDE分析',
+                        font: { size: 18, family: 'Arial, sans-serif' }
+                    },
+                    // 第一个子图的x轴
+                    xaxis: {
+                        title: '波长 Wavelength (nm)',
+                        domain: [0, 1],
+                        anchor: 'y',
+                        showgrid: true
+                    },
+                    // 第一个子图的左y轴 (SiPM PDE)
+                    yaxis: {
+                        title: 'SiPM PDE (%)',
+                        domain: [0.55, 1],
+                        titlefont: { color: 'green' },
+                        tickfont: { color: 'green' },
+                        showgrid: true
+                    },
+                    // 第一个子图的右y轴 (发射光谱)
+                    yaxis2: {
+                        title: '发射强度 (a.u.)',
+                        overlaying: 'y',
+                        side: 'right',
+                        titlefont: { color: 'red' },
+                        tickfont: { color: 'red' }
+                    },
+                    // 第二个子图的x轴
+                    xaxis2: {
+                        title: '波长 Wavelength (nm)',
+                        domain: [0, 1],
+                        anchor: 'y3',
+                        showgrid: true
+                    },
+                    // 第二个子图的y轴 (卷积)
+                    yaxis3: {
+                        title: '卷积强度 (a.u.)',
+                        domain: [0, 0.45],
+                        showgrid: true
+                    },
+                    annotations: [{
+                        text: `PDE = ${pdeValue.toFixed(4)}`,
+                        xref: 'paper',
+                        yref: 'paper',
+                        x: 0.5,
+                        y: -0.05,
+                        xanchor: 'center',
+                        showarrow: false,
+                        font: { size: 16, color: 'purple', weight: 'bold' }
+                    }],
+                    height: 800,
+                    showlegend: true,
+                    legend: { x: 0.02, y: 0.98 },
+                    font: { family: 'Arial, sans-serif' },
+                    hovermode: 'x unified'
+                };
+                
+                // 一次性创建所有图表
+                Plotly.newPlot('plotly-chart', allTraces, layout, { responsive: true });
 
             } catch (error) {
-                alert(`处理错误: ${error}`);
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('calcButton').disabled = false;
+                alert(`处理错误: ${error.message || error}`);
+                console.error(error);
             }
-            return result;
         }
 
         async function parseCSV(file) {
             const text = await file.text();
-            return text.split('\n')
-                .map(line => line.trim())
-                .filter(line => line)
-                .map(line => line.split(',').map(Number))
-                .filter(arr => arr.length === 2);
-        }
-
-        function hexToBase64(hexString) {
-            return btoa(String.fromCharCode.apply(null, 
-                hexString.match(/\w{2}/g).map(byte => parseInt(byte, 16))
-            ));
+            return parseCSVText(text);
         }
     </script>
 </body>
