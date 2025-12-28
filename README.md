@@ -61,9 +61,13 @@ wavelength, intensity
 
 [BC408](https://luxiumsolutions.com/sites/default/files/2023-08/146337_Luxium_SGC%20BC400%20404%20408%20412%20416_FIN.pdf)
 
+[CLYC](https://link.springer.com/article/10.1007/s41365-017-0342-4#Fig2)
+
 ## SiPM
 
 [Sensl 60035](https://www.onsemi.com/pdf/datasheet/microj-series-d.pdf)
+
+[Hamamatsu S13360-6050VE](https://www.hamamatsu.com.cn/content/dam/hamamatsu-photonics/sites/documents/99_SALES_LIBRARY/ssd/s13360-2050ve_etc_kapd1053e.pdf)
 
 ## Sample Results
 

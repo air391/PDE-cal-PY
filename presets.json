@@ -11,6 +11,12 @@
       "name": "BC408 (Plastic Scintillator)",
       "description": "General purpose plastic scintillator",
       "file": "Scin/BC408.csv"
+    },
+    {
+      "id": "CLYC",
+      "name": "CLYC:Ce (Ce-doped CLYC)",
+      "description": "Cs2LiYCl6:Ce3+ (CLYC)",
+      "file": "Scin/CLYC.csv"
     }
   ],
   "sipms": [
@@ -19,6 +25,12 @@
       "name": "SensL 60035 @ 2.5V",
       "description": "SensL MicroJ-series 60035 SiPM at 2.5V overvoltage",
       "file": "SiPM/60035_2.5V.csv"
+    },
+    {
+      "id": "6050",
+      "name": "Hamamatsu S13360-6050VE",
+      "description": "Hamamatsu S13360-2050VE/-3050VE/-6050VE",
+      "file": "SiPM/6050ve.csv"
     }
   ]
 }
