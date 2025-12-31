@@ -2,6 +2,8 @@
 
 Calculate the PDE (Photon Detection Efficiency) with scintillator emission spectrum and SiPM absorption spectrum. The emission spectrum will be interpolated at the x value of absorption spectrum, and PDE is calculated with `numpy.trapz` or `numpy.trapezoid` (for compatibility with newer numpy versions).
 
+[https://air391.github.io/PDE-cal-PY/](https://air391.github.io/PDE-cal-PY/)
+
 ## Features
 
 - **JSON-based Preset Configuration**: Presets are defined in `presets.json` - add new CSV files by simply updating this file
